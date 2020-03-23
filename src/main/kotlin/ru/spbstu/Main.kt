@@ -20,5 +20,7 @@ fun main(args: Array<String>) {
 
         println(((x pow 2) / 2 + x / 2).subst(x to y + 1))
         println(finiteDifference((x pow 2) / 2 + x / 2, x))
+
+        println((x + y) * ((x + y) pow -2))
     }
 }

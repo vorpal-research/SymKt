@@ -1,6 +1,7 @@
 package ru.spbstu
 
 import ru.spbstu.wheels.joinTo
+import kotlin.math.abs
 import kotlin.reflect.KProperty
 
 // represents a builder for the `sum(v * k)` or `product(k ^ v)` for each (k, v) in the map
@@ -187,18 +188,19 @@ data class Product(val constant: Rational = Rational.ONE,
     }
 
     companion object {
-        private fun simplifyData(constant: Rational, parts: Map<AtomLike, Rational>): Symbolic {
-            if(constant == Rational.ZERO)
-                return Const.ZERO
-            if(parts.isEmpty())
-                return Const(constant)
-            if(parts.size == 1) {
+        private fun simplifyData(constant: Rational, parts: Map<AtomLike, Rational>): Symbolic = when {
+            constant == Rational.ZERO -> Const.ZERO
+            parts.isEmpty() -> Const(constant)
+            parts.size == 1 -> {
                 val (p, c) = parts.entries.first()
-                if(c == Rational.ONE && constant == Rational.ONE) return p
-                if(c == Rational.ONE) return Sum(parts = mapOf(p to constant))
+                when {
+                    c == Rational.ONE && constant == Rational.ONE -> p
+                    c == Rational.ONE -> Sum(parts = mapOf(p to constant))
+                    else -> Product(constant, parts)
+                }
             }
             // XXX: check if map contains zero values?
-            return Product(constant, parts)
+            else -> Product(constant, parts)
         }
 
         fun of(vararg parts: Symbolic): Symbolic {
@@ -257,9 +259,25 @@ operator fun Symbolic.minus(other: Rational) = plus(-other)
 operator fun Symbolic.minus(other: Long) = plus(-other)
 operator fun Symbolic.minus(other: Int) = plus(-other)
 
+operator fun Symbolic.div(other: Symbolic) = times(other pow -1)
 operator fun Symbolic.div(other: Rational) = times(other.inverse())
 operator fun Symbolic.div(other: Long) = times(Rational(1, other))
 operator fun Symbolic.div(other: Int) = times(Rational(1, other.toLong()))
+
+data class Pow(val base: Symbolic, val power: Rational): Apply("pow", base, Const(power)) {
+    override fun copy(arguments: List<Symbolic>): Symbolic {
+        check(arguments.size == 2)
+        val (base, power) = arguments
+        check(power is Const)
+        return of(base, power.value)
+    }
+
+    override fun toString(): String = "pow($base, $power)"
+
+    companion object {
+        fun of(base: Symbolic, power: Rational): Symbolic = base pow power
+    }
+}
 
 infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
     0L -> Const.ONE
@@ -280,11 +298,14 @@ infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
             )
         }
         is AtomLike -> Product(parts = mapOf(this to Rational(power)))
-        is Sum -> {
-            require(power > 0) { "Unsupported: sum to the negative power"}
-            var res = this
-            repeat(power.toInt() - 1) { res *= this }
-            res
+        is Sum -> when (power) {
+            in 0..100 -> {
+                var res = this
+                repeat(power.toInt() - 1) { res *= this }
+                res
+            }
+            !in -100..100 -> Pow(this, Rational(power))
+            else -> Pow(this, -Rational.ONE) pow abs(power)
         }
     }
 }
@@ -298,7 +319,10 @@ infix fun Symbolic.pow(power: Rational): Symbolic = when {
             Product(parts = interm.data)
         }
         is AtomLike -> Product(parts = mapOf(this to power))
-        is Sum -> Apply("pow", listOf(this, Const(power)))
+        is Sum -> {
+            if(power.num == 1L || power.num == -1L) Pow(this, power)
+            else Pow(this, power / abs(power.num)) pow abs(power.num)
+        }
     }
 }
 

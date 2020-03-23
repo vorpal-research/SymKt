@@ -9,6 +9,10 @@ class RowSumTest {
         val n by SymbolicScope
         val k by SymbolicScope
         assertEquals(
+            Const.ZERO,
+            RowSum.of(Const.ONE, n) { Const.ZERO }
+        )
+        assertEquals(
             n * 2,
             RowSum.of(Const.ONE, n) { i -> Const(2) }
         )
