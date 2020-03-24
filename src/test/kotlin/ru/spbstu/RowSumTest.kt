@@ -52,7 +52,7 @@ class RowSumTest {
 
     val i by SymbolicScope
 
-    fun crossCheck(functionOfI: Symbolic) {
+    private fun crossCheck(functionOfI: Symbolic) {
         val v = Var.fresh()
         val sum = RowSum.of(i, Const.ONE, v, functionOfI)
         assertEquals(finiteDifference(sum, v), functionOfI.subst(i to v))

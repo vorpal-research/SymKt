@@ -27,11 +27,11 @@ sealed class SumLike: Symbolic() {
     abstract fun asSum(): Sum
 }
 sealed class ProductLike: SumLike() {
-    abstract fun asProd(): Product
+    abstract fun asProduct(): Product
 }
 sealed class AtomLike: ProductLike() {
     override fun asSum(): Sum = Sum(parts = mapOf(this to Rational.ONE))
-    override fun asProd(): Product = Product(parts = mapOf(this to Rational.ONE))
+    override fun asProduct(): Product = Product(parts = mapOf(this to Rational.ONE))
     override fun simplify(): Symbolic = this
 }
 data class Const(val value: Rational): AtomLike() {
@@ -39,7 +39,7 @@ data class Const(val value: Rational): AtomLike() {
     constructor(value: Int): this(Rational(value))
 
     override fun asSum(): Sum = Sum(constant = value)
-    override fun asProd(): Product = Product(constant = value)
+    override fun asProduct(): Product = Product(constant = value)
 
     override fun subst(substitution: Map<Var, Symbolic>) = this
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C = mutableCollection
@@ -167,7 +167,7 @@ data class Product(val constant: Rational = Rational.ONE,
     override fun asSum(): Sum = Sum(parts = mapOf(copy(constant = Rational.ONE) to constant))
     override fun simplify(): Symbolic = simplifyData(constant, parts)
 
-    override fun asProd(): Product = this
+    override fun asProduct(): Product = this
 
     override fun subst(substitution: Map<Var, Symbolic>): Symbolic =
         of(Const(constant), *parts.mapToArray { c, r -> c.subst(substitution) pow r })
@@ -217,7 +217,7 @@ data class Product(val constant: Rational = Rational.ONE,
             var constantBuilder: Rational = Rational.ONE
             val partsBuilder: PartsBuilder<AtomLike> = PartsBuilder()
             for(part in prods) {
-                val prod = part.asProd()
+                val prod = part.asProduct()
                 constantBuilder *= prod.constant
                 for ((k, v) in prod.parts) {
                     partsBuilder[k] += v
@@ -324,12 +324,4 @@ infix fun Symbolic.pow(power: Rational): Symbolic = when {
             else Pow(this, power / abs(power.num)) pow abs(power.num)
         }
     }
-}
-
-object SymbolicScope {
-    operator fun getValue(self: Any?, prop: KProperty<*>): Var = Var(prop.name)
-
-    operator fun Rational.invoke() = Const(this)
-    operator fun Long.invoke() = Const(Rational(this))
-    operator fun Int.invoke() = Const(Rational(this.toLong()))
 }
