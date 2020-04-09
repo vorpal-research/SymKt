@@ -5,16 +5,17 @@
 
     <groupId>ru.spbstu</groupId>
     <artifactId>SymKt</artifactId>
-    <version>0.0.0.1-SNAPSHOT</version>
+    <version>0.0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>ru.spbstu.SymKt</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.3.70</kotlin.version>
+        <kotlin.version>1.3.71</kotlin.version>
         <kotlin.code.style>official</kotlin.code.style>
         <junit.version>4.12</junit.version>
+        <wheels.version>0.0.0.7</wheels.version>
     </properties>
 
     <dependencies>
@@ -23,12 +24,19 @@
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
         </dependency>
+
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit</artifactId>
+            <groupId>ru.spbstu</groupId>
+            <artifactId>kotlinx-warnings</artifactId>
             <version>${kotlin.version}</version>
-            <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>ru.spbstu</groupId>
+            <artifactId>kotlin-wheels</artifactId>
+            <version>${wheels.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -36,9 +44,10 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>ru.spbstu</groupId>
-            <artifactId>kotlin-wheels</artifactId>
-            <version>0.0.0.6</version>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -68,6 +77,20 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -77,5 +100,13 @@
             <url>http://dl.bintray.com/vorpal-research/kotlin-maven</url>
         </repository>
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>bintray-vorpal-research-kotlin-maven</id>
+            <name>vorpal-research-kotlin-maven</name>
+            <url>https://api.bintray.com/maven/vorpal-research/kotlin-maven/${project.artifactId}/;publish=1</url>
+        </repository>
+    </distributionManagement>
 
 </project>

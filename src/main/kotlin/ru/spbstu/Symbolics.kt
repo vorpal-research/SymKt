@@ -1,6 +1,7 @@
 package ru.spbstu
 
 import ru.spbstu.wheels.joinTo
+import ru.spbstu.wheels.mapToArray
 import kotlin.math.abs
 import kotlin.reflect.KProperty
 
@@ -101,7 +102,7 @@ data class Sum(val constant: Rational = Rational.ZERO,
     override fun simplify(): Symbolic = simplifyData(constant, parts)
 
     override fun subst(substitution: Map<Var, Symbolic>): Symbolic =
-        of(Const(constant), *parts.mapToArray { c, r -> c.subst(substitution) * r })
+        of(Const(constant), *parts.mapToArray { (c, r) -> c.subst(substitution) * r })
 
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply {
@@ -115,7 +116,7 @@ data class Sum(val constant: Rational = Rational.ZERO,
             constant = constant * factor.value,
             parts = parts.mapValues { (_, v) -> v * factor.value }
         )
-        else -> of(factor * constant, *parts.mapToArray { ek, ev -> ek * factor * ev })
+        else -> of(factor * constant, *parts.mapToArray { (ek, ev) -> ek * factor * ev })
     }
 
     companion object {
@@ -170,7 +171,7 @@ data class Product(val constant: Rational = Rational.ONE,
     override fun asProduct(): Product = this
 
     override fun subst(substitution: Map<Var, Symbolic>): Symbolic =
-        of(Const(constant), *parts.mapToArray { c, r -> c.subst(substitution) pow r })
+        of(Const(constant), *parts.mapToArray { (c, r) -> c.subst(substitution) pow r })
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply {
             parts.forEach { (k, _) -> k.vars(mutableCollection) }

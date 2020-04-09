@@ -1,5 +1,7 @@
 package ru.spbstu
 
+import ru.spbstu.wheels.mapToArray
+
 private val bernoulliCache = mutableMapOf(
     0L to Rational.ONE,
     2L to Rational(1, 6),

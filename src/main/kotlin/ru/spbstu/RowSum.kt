@@ -1,6 +1,7 @@
 package ru.spbstu
 
 import kotlin.math.abs
+import ru.spbstu.wheels.mapToArray
 
 data class RowSum(
     val index: Var,
@@ -46,7 +47,7 @@ data class RowSum(
             if(body is Sum) {
                 return Sum.of(
                     Const(body.constant) * range,
-                    *body.parts.mapToArray { s, c ->
+                    *body.parts.mapToArray { (s, c) ->
                         val rs = symbolicRowSum(index, lowerBound, upperBound, range, s)
                             ?: RowSum(index, lowerBound, upperBound, body)
                         Const(c) * rs
