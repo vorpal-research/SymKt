@@ -57,8 +57,7 @@ data class RowSum(
 
             if(body == index) return powRowSum(index, lowerBound, upperBound, body, 1)
 
-            val bodyVars = body.vars()
-            if(index !in bodyVars) return body * range
+            if(!body.containsVariable(index)) return body * range
 
             if(body is Product) {
                 if(body.parts.size == 1) {
@@ -67,7 +66,7 @@ data class RowSum(
                     return powRowSum(index, lowerBound, upperBound, base, ratPower.wholePart)?.times(body.constant)
                 }
 
-                val (lhv, rhv) = body.parts.partitionTo(mutableMapOf(), mutableMapOf()) { s, _ -> index !in s.vars() }
+                val (lhv, rhv) = body.parts.partitionTo(mutableMapOf(), mutableMapOf()) { s, _ -> !s.containsVariable(index) }
                 if(lhv.isEmpty()) return null
 
                 val left = body.copy(parts = lhv).simplify()

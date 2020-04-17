@@ -19,6 +19,7 @@ inline class PartsBuilder<K>(val data: MutableMap<K, Rational> = mutableMapOf())
 sealed class Symbolic {
     abstract fun simplify(): Symbolic
     abstract fun subst(substitution: Map<Var, Symbolic>): Symbolic
+    abstract fun containsVariable(variable: Var): Boolean
     abstract fun <C: MutableCollection<Var>> vars(mutableCollection: C): C
 }
 fun Symbolic.vars(): Set<Var> = vars(mutableSetOf())
@@ -43,6 +44,8 @@ data class Const(val value: Rational): AtomLike() {
     override fun asProduct(): Product = Product(constant = value)
 
     override fun subst(substitution: Map<Var, Symbolic>) = this
+    override fun containsVariable(variable: Var): Boolean = false
+
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C = mutableCollection
 
     override fun toString(): String = "$value"
@@ -56,6 +59,8 @@ data class Var(val name: String): AtomLike() {
     override fun toString(): String = name
 
     override fun subst(substitution: Map<Var, Symbolic>) = substitution[this] ?: this
+    override fun containsVariable(variable: Var): Boolean = this.name == variable.name
+
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply { add(this@Var) }
 
@@ -76,6 +81,9 @@ open class Apply(val function: String, val arguments: List<Symbolic>): AtomLike(
 
     override fun subst(substitution: Map<Var, Symbolic>) =
         copy(arguments = arguments.map { it.subst(substitution) })
+
+    override fun containsVariable(variable: Var): Boolean = arguments.any { it.containsVariable(variable) }
+
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply {
             arguments.forEach { it.vars(mutableCollection) }
@@ -91,6 +99,8 @@ open class Apply(val function: String, val arguments: List<Symbolic>): AtomLike(
 
     override fun hashCode(): Int =
         31 * function.hashCode() + arguments.hashCode()
+
+    override fun toString(): String = "$function(${arguments.joinToString()})"
 }
 
 // a unified representation for constant + sum[(k, v) in parts](v * k)
@@ -103,6 +113,9 @@ data class Sum(val constant: Rational = Rational.ZERO,
 
     override fun subst(substitution: Map<Var, Symbolic>): Symbolic =
         of(Const(constant), *parts.mapToArray { (c, r) -> c.subst(substitution) * r })
+
+    override fun containsVariable(variable: Var): Boolean =
+        variable in parts || parts.keys.any { it.containsVariable(variable) }
 
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply {
@@ -172,6 +185,10 @@ data class Product(val constant: Rational = Rational.ONE,
 
     override fun subst(substitution: Map<Var, Symbolic>): Symbolic =
         of(Const(constant), *parts.mapToArray { (c, r) -> c.subst(substitution) pow r })
+
+    override fun containsVariable(variable: Var): Boolean =
+        variable in parts || parts.keys.any { it.containsVariable(variable) }
+
     override fun <C : MutableCollection<Var>> vars(mutableCollection: C): C =
         mutableCollection.apply {
             parts.forEach { (k, _) -> k.vars(mutableCollection) }
