@@ -1,6 +1,5 @@
 package ru.spbstu
 
-import kotlin.math.abs
 import ru.spbstu.wheels.mapToArray
 
 data class RowProduct(
@@ -21,18 +20,28 @@ data class RowProduct(
 
     companion object {
         fun symbolicRowProduct(index: Var, lowerBound: Symbolic, upperBound: Symbolic, body: Symbolic, range: Symbolic): Symbolic? {
-            if(!body.containsVariable(index) && range is Const) return Pow.of(body, range.value)
+            if(!body.containsVariable(index) && range is Const) return Pow.of(body, range)
 
-            if(range is Const && body is Product) {
+            if(body is Product) {
                 val mapped = body.parts.mapToArray { (s, c) ->
                     val sym = symbolicRowProduct(index, lowerBound, upperBound, s, range) ?: return null
                     sym pow c
                 }
 
-                Product.of(Const(body.constant) pow range.value, *mapped)
+                return Product.of(Const(body.constant) pow range, *mapped)
             }
 
-            // TODO: think about allowing "pow to symbolic"
+            if(body == index) return Factorial(index)
+            if(body is Sum) {
+                val (a, b) =
+                    body.parts.partitionTo(mutableMapOf(), mutableMapOf()) { a, _ -> !a.containsVariable(index) }
+                // i + k --> (i+k)! / k!
+                if(b[index] == Rational.ONE && b.size == 1) {
+                    val k = Sum(constant = body.constant, parts = a).simplify()
+                    return Factorial(body) / Factorial(k)
+                }
+            }
+
             if(range is Const && range.value < Rational(100)) {
                 require(range.value.isWhole() && range.value >= Rational.ZERO)
                 return Product.of(*(0 until range.value.wholePart).toList().mapToArray {

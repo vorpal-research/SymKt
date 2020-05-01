@@ -53,6 +53,7 @@ data class Const(val value: Rational): AtomLike() {
     companion object {
         val ZERO = Const(Rational.ZERO)
         val ONE = Const(Rational.ONE)
+        val MINUS_ONE = Const(-Rational.ONE)
     }
 }
 data class Var(val name: String): AtomLike() {
@@ -282,18 +283,17 @@ operator fun Symbolic.div(other: Rational) = times(other.inverse())
 operator fun Symbolic.div(other: Long) = times(Rational(1, other))
 operator fun Symbolic.div(other: Int) = times(Rational(1, other.toLong()))
 
-data class Pow(val base: Symbolic, val power: Rational): Apply("pow", base, Const(power)) {
+data class Pow(val base: Symbolic, val power: Symbolic): Apply("pow", base, power) {
     override fun copy(arguments: List<Symbolic>): Symbolic {
         check(arguments.size == 2)
         val (base, power) = arguments
-        check(power is Const)
-        return of(base, power.value)
+        return of(base, power)
     }
 
     override fun toString(): String = "pow($base, $power)"
 
     companion object {
-        fun of(base: Symbolic, power: Rational): Symbolic = base pow power
+        fun of(base: Symbolic, power: Symbolic): Symbolic = base pow power
     }
 }
 
@@ -322,8 +322,8 @@ infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
                 repeat(power.toInt() - 1) { res *= this }
                 res
             }
-            !in -100..100 -> Pow(this, Rational(power))
-            else -> Pow(this, -Rational.ONE) pow abs(power)
+            !in -100..100 -> Pow(this, Const(power))
+            else -> Pow(this, -Const.ONE) pow abs(power)
         }
     }
 }
@@ -338,8 +338,22 @@ infix fun Symbolic.pow(power: Rational): Symbolic = when {
         }
         is AtomLike -> Product(parts = mapOf(this to power))
         is Sum -> {
-            if(power.num == 1L || power.num == -1L) Pow(this, power)
-            else Pow(this, power / abs(power.num)) pow abs(power.num)
+            if(power.num == 1L || power.num == -1L) Pow(this, Const(power))
+            else Pow(this, Const(power / abs(power.num))) pow abs(power.num)
         }
     }
+}
+
+infix fun Symbolic.pow(power: Symbolic): Symbolic = when {
+    this == Const.ZERO && power == Const.ZERO -> throw ArithmeticException("Zero to the power of zero")
+    power is Const -> pow(power.value)
+    this == Const.ZERO -> Const.ZERO
+    this == Const.ONE -> Const.ONE
+    power is Sum -> {
+        Product.of(this pow power.constant, *power.parts.mapToArray { (x, m) ->
+            this pow x pow m
+        })
+    }
+/* any other options? */
+    else -> Pow(this, power)
 }

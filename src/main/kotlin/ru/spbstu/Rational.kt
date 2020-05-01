@@ -3,7 +3,7 @@ package ru.spbstu
 import kotlin.math.abs
 import kotlin.math.sign
 
-class Rational(num: Long, den: Long = 1): Comparable<Rational> {
+class Rational(num: Long, den: Long = 1): Comparable<Rational>, Number() {
     val num: Long
     val den: Long
 
@@ -58,7 +58,7 @@ class Rational(num: Long, den: Long = 1): Comparable<Rational> {
 
     fun isWhole() = den == 1L
 
-    fun toDouble() = num.toDouble() / den.toDouble()
+    override fun toDouble() = num.toDouble() / den.toDouble()
 
     override fun equals(other: Any?): Boolean =
         this === other || other is Rational && num == other.num && den == other.den
@@ -68,6 +68,13 @@ class Rational(num: Long, den: Long = 1): Comparable<Rational> {
         result = 31 * result + den.hashCode()
         return result
     }
+
+    override fun toFloat(): Float = toDouble().toFloat()
+    override fun toInt(): Int = wholePart.toInt()
+    override fun toLong(): Long = wholePart
+    override fun toShort(): Short = wholePart.toShort()
+    override fun toByte(): Byte = wholePart.toByte()
+    override fun toChar(): Char = wholePart.toChar()
 
     override fun toString(): String = when(den) {
         1L -> "$num"
