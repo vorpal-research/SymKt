@@ -81,7 +81,7 @@ open class Apply(val function: String, val arguments: List<Symbolic>): AtomLike(
         Apply(function, arguments)
 
     override fun subst(substitution: Map<Var, Symbolic>) =
-        copy(arguments = arguments.map { it.subst(substitution) })
+        copy(arguments = listOf(arguments.first()) + ( arguments.drop(1).map { it.subst(substitution) }))
 
     override fun containsVariable(variable: Var): Boolean = arguments.any { it.containsVariable(variable) }
 
