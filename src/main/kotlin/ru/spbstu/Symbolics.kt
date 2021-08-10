@@ -36,6 +36,7 @@ sealed class AtomLike: ProductLike() {
     override fun asProduct(): Product = Product(parts = mapOf(this to Rational.ONE))
     override fun simplify(): Symbolic = this
 }
+
 data class Const(val value: Rational): AtomLike() {
     constructor(value: Long): this(Rational(value))
     constructor(value: Int): this(Rational(value))
@@ -73,6 +74,7 @@ data class Var(val name: String): AtomLike() {
         fun fresh(): Var = fresh("%")
     }
 }
+
 open class Apply(val function: String, val arguments: List<Symbolic>): AtomLike() {
 
     constructor(function: String, vararg arguments: Symbolic): this(function, arguments.asList())
@@ -282,6 +284,91 @@ operator fun Symbolic.div(other: Symbolic) = times(other pow -1)
 operator fun Symbolic.div(other: Rational) = times(other.inverse())
 operator fun Symbolic.div(other: Long) = times(Rational(1, other))
 operator fun Symbolic.div(other: Int) = times(Rational(1, other.toLong()))
+
+fun Symbolic.reciprocal() : Symbolic {
+    return Const(1) / this
+}
+
+open class Shift(base: Symbolic, shift: Symbolic, val type : Char) : Apply("sh$type", base, shift) {
+    override fun copy(arguments: List<Symbolic>): Symbolic {
+        check(arguments.size == 2)
+        val (base, shift) = arguments
+        return ShiftLeft.of(base, shift)
+    }
+}
+
+data class ShiftLeft(val base : Symbolic, val shift : Symbolic): Shift(base, shift, 'l') {
+    override fun copy(arguments: List<Symbolic>): Symbolic {
+        check(arguments.size == 2)
+        val (base, shift) = arguments
+        return of(base, shift)
+    }
+
+    override fun subst(substitution: Map<Var, Symbolic>): Symbolic = of(base.subst(substitution), shift.subst(substitution))
+
+    override fun toString(): String = "shl($base, $shift)"
+
+    companion object{
+        fun of(base: Symbolic, shift: Symbolic) : Symbolic = base shl shift
+    }
+}
+
+infix fun Symbolic.shl(shift : Long) : Symbolic  {
+    if (shift == 0L) return this
+    return when (this) {
+        is ShiftLeft -> ShiftLeft.of(base, this.shift + shift)
+        is Const -> if (value.isWhole()) Const(value.num shl shift.toInt()) else ShiftLeft(this, Const(shift))
+        else -> ShiftLeft(this, Const(shift))
+    }
+}
+
+infix fun Symbolic.shl(shift : Rational) : Symbolic {
+    if (shift.isWhole()) return shl(shift.num)
+    if (this is ShiftLeft) return ShiftLeft.of(base, this.shift + shift)
+    return ShiftLeft(this, Const(shift))
+}
+
+infix fun Symbolic.shl(shift : Symbolic) : Symbolic {
+    if (shift is Const) return shl(shift.value)
+    if (this is ShiftLeft) return ShiftLeft.of(base, this.shift + shift)
+    return ShiftLeft(this, shift)
+}
+
+data class ShiftRight(val base : Symbolic, val shift : Symbolic): Shift(base, shift, 'r') {
+
+    override fun copy(arguments: List<Symbolic>): Symbolic {
+        check(arguments.size == 2)
+        val (base, shift) = arguments
+        return of(base, shift)
+    }
+
+    override fun toString(): String = "shr($base, $shift)"
+
+    companion object{
+        fun of(base: Symbolic, shift: Symbolic) : Symbolic = base shr shift
+    }
+}
+
+infix fun Symbolic.shr(shift : Long) : Symbolic  {
+    if (shift == 0L) return this
+    return when (this) {
+        is ShiftRight -> ShiftRight.of(base, this.shift + shift)
+        is Const -> if (value.isWhole()) Const(value.num shr shift.toInt()) else ShiftRight(this, Const(shift))
+        else -> ShiftRight(this, Const(shift))
+    }
+}
+
+infix fun Symbolic.shr(shift : Rational) : Symbolic {
+    if (shift.isWhole()) return shr(shift.num)
+    if (this is ShiftRight) return ShiftRight.of(base, this.shift + shift)
+    return ShiftRight(this, Const(shift))
+}
+
+infix fun Symbolic.shr(shift : Symbolic) : Symbolic {
+    if (shift is Const) return shr(shift.value)
+    if (this is ShiftRight) return ShiftRight.of(base, this.shift + shift)
+    return ShiftRight(this, shift)
+}
 
 data class Pow(val base: Symbolic, val power: Symbolic): Apply("pow", base, power) {
     override fun copy(arguments: List<Symbolic>): Symbolic {
