@@ -15,6 +15,5 @@ class SumTest {
         assertEquals((x + 1) * (x + 1), x * x + x * 2 + 1)
         assertEquals(x, x + 1 - 1)
         assertTrue { (x + 1 - 1) is Var }
-
     }
 }

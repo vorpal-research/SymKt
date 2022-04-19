@@ -3,15 +3,14 @@ package ru.spbstu
 import ru.spbstu.wheels.joinTo
 import ru.spbstu.wheels.mapToArray
 import kotlin.math.abs
-import kotlin.reflect.KProperty
 
 // represents a builder for the `sum(v * k)` or `product(k ^ v)` for each (k, v) in the map
 // compacted not to store zero values
 // this allow to do things like `builder[x] += 3` which is not possible for a simple map
-inline class PartsBuilder<K>(val data: MutableMap<K, Rational> = mutableMapOf()) {
-    operator fun get(key: K): Rational = data[key] ?: Rational.ZERO
-    operator fun set(key: K, value: Rational) {
-        if(value == Rational.ZERO) data.remove(key)
+inline class PartsBuilder<K>(val data: MutableMap<K, SymNumber> = mutableMapOf()) {
+    operator fun get(key: K): SymNumber = data[key] ?: SymRational.ZERO
+    operator fun set(key: K, value: SymNumber) {
+        if(value == SymRational.ZERO) data.remove(key)
         else data[key] = value
     }
 }
@@ -32,14 +31,15 @@ sealed class ProductLike: SumLike() {
     abstract fun asProduct(): Product
 }
 sealed class AtomLike: ProductLike() {
-    override fun asSum(): Sum = Sum(parts = mapOf(this to Rational.ONE))
-    override fun asProduct(): Product = Product(parts = mapOf(this to Rational.ONE))
+    override fun asSum(): Sum = Sum(parts = mapOf(this to SymRational.ONE))
+    override fun asProduct(): Product = Product(parts = mapOf(this to SymRational.ONE))
     override fun simplify(): Symbolic = this
 }
 
-data class Const(val value: Rational): AtomLike() {
-    constructor(value: Long): this(Rational(value))
-    constructor(value: Int): this(Rational(value))
+data class Const(val value: SymNumber): AtomLike() {
+    constructor(value: Long): this(SymRational(value))
+    constructor(value: Int): this(SymRational(value))
+    constructor(value: Double): this(SymDouble(value))
 
     override fun asSum(): Sum = Sum(constant = value)
     override fun asProduct(): Product = Product(constant = value)
@@ -52,9 +52,9 @@ data class Const(val value: Rational): AtomLike() {
     override fun toString(): String = "$value"
 
     companion object {
-        val ZERO = Const(Rational.ZERO)
-        val ONE = Const(Rational.ONE)
-        val MINUS_ONE = Const(-Rational.ONE)
+        val ZERO = Const(SymRational.ZERO)
+        val ONE = Const(SymRational.ONE)
+        val MINUS_ONE = Const(-SymRational.ONE)
     }
 }
 data class Var(val name: String): AtomLike() {
@@ -107,8 +107,8 @@ open class Apply(val function: String, val arguments: List<Symbolic>): AtomLike(
 }
 
 // a unified representation for constant + sum[(k, v) in parts](v * k)
-data class Sum(val constant: Rational = Rational.ZERO,
-               val parts: Map<ProductLike, Rational> = mapOf()
+data class Sum(val constant: SymNumber = SymRational.ZERO,
+               val parts: Map<ProductLike, SymNumber> = mapOf()
 ): SumLike() {
     override fun asSum(): Sum = this
 
@@ -136,10 +136,11 @@ data class Sum(val constant: Rational = Rational.ZERO,
     }
 
     companion object {
-        private fun simplifyData(constant: Rational, parts: Map<ProductLike, Rational>): Symbolic {
+        private fun simplifyData(constant: SymNumber, parts: Map<ProductLike, SymNumber
+                >): Symbolic {
             if(parts.isEmpty())
                 return Const(constant)
-            if(parts.size == 1 && constant == Rational.ZERO) {
+            if(parts.size == 1 && constant == SymRational.ZERO) {
                 val (p, c) = parts.entries.first()
                 return p * c
             }
@@ -151,7 +152,7 @@ data class Sum(val constant: Rational = Rational.ZERO,
             if(parts.isEmpty()) return Const.ZERO
             if(parts.size == 1) return parts.first()
 
-            var constantBuilder: Rational = Rational.ZERO
+            var constantBuilder: SymNumber = SymRational.ZERO
             val partsBuilder: PartsBuilder<ProductLike> = PartsBuilder()
             for(part in parts) {
                 part as SumLike
@@ -167,9 +168,9 @@ data class Sum(val constant: Rational = Rational.ZERO,
 
     override fun toString(): String {
         val builder = StringBuilder()
-        if(constant != Rational.ZERO) builder.append("$constant + ")
-        fun elementToString(p: ProductLike, c: Rational): String = when(c) {
-            Rational.ONE -> "$p"
+        if(constant != SymRational.ZERO) builder.append("$constant + ")
+        fun elementToString(p: ProductLike, c: SymNumber): String = when(c) {
+            SymRational.ONE -> "$p"
             else -> "$c * $p"
         }
         parts.joinTo(builder, separator = " + ", transform = ::elementToString)
@@ -178,10 +179,10 @@ data class Sum(val constant: Rational = Rational.ZERO,
 }
 
 // a unified representation for constant * product[(k, v) in parts](k ^ v)
-data class Product(val constant: Rational = Rational.ONE,
-                   val parts: Map<AtomLike, Rational> = mapOf()
+data class Product(val constant: SymNumber = SymRational.ONE,
+                   val parts: Map<AtomLike, SymNumber> = mapOf()
 ): ProductLike() {
-    override fun asSum(): Sum = Sum(parts = mapOf(copy(constant = Rational.ONE) to constant))
+    override fun asSum(): Sum = Sum(parts = mapOf(copy(constant = SymRational.ONE) to constant))
     override fun simplify(): Symbolic = simplifyData(constant, parts)
 
     override fun asProduct(): Product = this
@@ -199,9 +200,9 @@ data class Product(val constant: Rational = Rational.ONE,
 
     override fun toString(): String {
         val builder = StringBuilder()
-        if(constant != Rational.ONE) builder.append("$constant * ")
-        fun elementToString(p: AtomLike, c: Rational): String = when(c) {
-            Rational.ONE -> "$p"
+        if(constant != SymRational.ONE) builder.append("$constant * ")
+        fun elementToString(p: AtomLike, c: SymNumber): String = when(c) {
+            SymRational.ONE -> "$p"
             else -> "($p^$c)"
         }
         parts.joinTo(builder, separator = " * ", transform = ::elementToString)
@@ -209,14 +210,14 @@ data class Product(val constant: Rational = Rational.ONE,
     }
 
     companion object {
-        private fun simplifyData(constant: Rational, parts: Map<AtomLike, Rational>): Symbolic = when {
-            constant == Rational.ZERO -> Const.ZERO
+        private fun simplifyData(constant: SymNumber, parts: Map<AtomLike, SymNumber>): Symbolic = when {
+            constant == SymRational.ZERO -> Const.ZERO
             parts.isEmpty() -> Const(constant)
             parts.size == 1 -> {
                 val (p, c) = parts.entries.first()
                 when {
-                    c == Rational.ONE && constant == Rational.ONE -> p
-                    c == Rational.ONE -> Sum(parts = mapOf(p to constant))
+                    c == SymRational.ONE && constant == SymRational.ONE -> p
+                    c == SymRational.ONE -> Sum(parts = mapOf(p to constant))
                     else -> Product(constant, parts)
                 }
             }
@@ -235,7 +236,7 @@ data class Product(val constant: Rational = Rational.ONE,
                 is ProductLike -> prods += part
             }.sealed()
 
-            var constantBuilder: Rational = Rational.ONE
+            var constantBuilder: SymNumber = SymRational.ONE
             val partsBuilder: PartsBuilder<AtomLike> = PartsBuilder()
             for(part in prods) {
                 val prod = part.asProduct()
@@ -260,7 +261,7 @@ operator fun Symbolic.plus(constant: Long): Symbolic =
     Sum.of(this, Const(constant))
 operator fun Symbolic.plus(constant: Int): Symbolic =
     Sum.of(this, Const(constant))
-operator fun Symbolic.plus(constant: Rational): Symbolic =
+operator fun Symbolic.plus(constant: SymNumber): Symbolic =
     Sum.of(this, Const(constant))
 operator fun Symbolic.plus(other: Symbolic): Symbolic =
     Sum.of(this, other)
@@ -268,7 +269,7 @@ operator fun Symbolic.times(constant: Long): Symbolic =
     Product.of(this, Const(constant))
 operator fun Symbolic.times(constant: Int): Symbolic =
     Product.of(this, Const(constant))
-operator fun Symbolic.times(constant: Rational): Symbolic =
+operator fun Symbolic.times(constant: SymNumber): Symbolic =
     Product.of(this, Const(constant))
 operator fun Symbolic.times(other: Symbolic): Symbolic =
     Product.of(this, other)
@@ -276,14 +277,14 @@ operator fun Symbolic.times(other: Symbolic): Symbolic =
 operator fun Symbolic.unaryMinus(): Symbolic = this * -1
 
 operator fun Symbolic.minus(other: Symbolic) = plus(-other)
-operator fun Symbolic.minus(other: Rational) = plus(-other)
+operator fun Symbolic.minus(other: SymNumber) = plus(-other)
 operator fun Symbolic.minus(other: Long) = plus(-other)
 operator fun Symbolic.minus(other: Int) = plus(-other)
 
 operator fun Symbolic.div(other: Symbolic) = times(other pow -1)
-operator fun Symbolic.div(other: Rational) = times(other.inverse())
-operator fun Symbolic.div(other: Long) = times(Rational(1, other))
-operator fun Symbolic.div(other: Int) = times(Rational(1, other.toLong()))
+operator fun Symbolic.div(other: SymNumber) = times(other.inverse())
+operator fun Symbolic.div(other: Long) = times(SymRational(1, other))
+operator fun Symbolic.div(other: Int) = times(SymRational(1, other.toLong()))
 
 fun Symbolic.reciprocal() : Symbolic {
     return Const(1) / this
@@ -317,13 +318,16 @@ infix fun Symbolic.shl(shift : Long) : Symbolic  {
     if (shift == 0L) return this
     return when (this) {
         is ShiftLeft -> ShiftLeft.of(base, this.shift + shift)
-        is Const -> if (value.isWhole()) Const(value.num shl shift.toInt()) else ShiftLeft(this, Const(shift))
+        is Const -> when (this.value) {
+            is SymRational -> if (value.isWhole()) Const(value.num shl shift.toInt()) else ShiftLeft(this, Const(shift))
+            is SymDouble -> ShiftLeft(this, Const(shift))
+        }
         else -> ShiftLeft(this, Const(shift))
     }
 }
 
-infix fun Symbolic.shl(shift : Rational) : Symbolic {
-    if (shift.isWhole()) return shl(shift.num)
+infix fun Symbolic.shl(shift : SymNumber) : Symbolic {
+    if (shift is SymRational && shift.isWhole()) return shl(shift.num)
     if (this is ShiftLeft) return ShiftLeft.of(base, this.shift + shift)
     return ShiftLeft(this, Const(shift))
 }
@@ -353,13 +357,16 @@ infix fun Symbolic.shr(shift : Long) : Symbolic  {
     if (shift == 0L) return this
     return when (this) {
         is ShiftRight -> ShiftRight.of(base, this.shift + shift)
-        is Const -> if (value.isWhole()) Const(value.num shr shift.toInt()) else ShiftRight(this, Const(shift))
+        is Const -> when (this.value) {
+            is SymRational -> if (value.isWhole()) Const(value.num shr shift.toInt()) else ShiftRight(this, Const(shift))
+            is SymDouble -> ShiftRight(this, Const(shift))
+        }
         else -> ShiftRight(this, Const(shift))
     }
 }
 
-infix fun Symbolic.shr(shift : Rational) : Symbolic {
-    if (shift.isWhole()) return shr(shift.num)
+infix fun Symbolic.shr(shift : SymNumber) : Symbolic {
+    if (shift is SymRational && shift.isWhole()) return shr(shift.num)
     if (this is ShiftRight) return ShiftRight.of(base, this.shift + shift)
     return ShiftRight(this, Const(shift))
 }
@@ -394,7 +401,7 @@ infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
             val partsBuilder = PartsBuilder<AtomLike>()
             for((k, v) in parts) {
                 val newPower = v * power
-                if(k is Const && newPower.isWhole()) constantBuilder *= k.value pow newPower.wholePart
+                if(k is Const && newPower is SymRational && newPower.isWhole()) constantBuilder *= k.value pow newPower.wholePart
                 else partsBuilder[k] = v * power
             }
             Product(
@@ -402,7 +409,7 @@ infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
                 parts = partsBuilder.data
             )
         }
-        is AtomLike -> Product(parts = mapOf(this to Rational(power)))
+        is AtomLike -> Product(parts = mapOf(this to SymRational(power)))
         is Sum -> when (power) {
             in 0..100 -> {
                 var res = this
@@ -415,8 +422,8 @@ infix fun Symbolic.pow(power: Long): Symbolic = when(power) {
     }
 }
 
-infix fun Symbolic.pow(power: Rational): Symbolic = when {
-    power.isWhole() -> pow(power.wholePart)
+infix fun Symbolic.pow(power: SymNumber): Symbolic = when {
+    power is SymRational && power.isWhole() -> pow(power.wholePart)
     else -> when(this) {
         is Product -> {
             val interm = PartsBuilder<AtomLike>(parts.mapValuesTo(mutableMapOf()) { (_, v) -> v * power })
@@ -424,9 +431,11 @@ infix fun Symbolic.pow(power: Rational): Symbolic = when {
             Product(parts = interm.data)
         }
         is AtomLike -> Product(parts = mapOf(this to power))
-        is Sum -> {
+        is Sum -> if (power is SymRational) {
             if(power.num == 1L || power.num == -1L) Pow(this, Const(power))
             else Pow(this, Const(power / abs(power.num))) pow abs(power.num)
+        } else {
+            Pow(this, Const(power))
         }
     }
 }

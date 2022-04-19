@@ -31,8 +31,8 @@ data class RowSum(
                 }
                 lowerBound is Const && upperBound is Const
                         && lowerBound.value > 1 && upperBound.value >= 0 -> {
-                    val upper = upperBound.value.wholePart
-                    val lower = lowerBound.value.wholePart
+                    val upper = upperBound.value.toLong()
+                    val lower = lowerBound.value.toLong()
                     if(power == -1L) Const(harmonic(upper) - harmonic(lower - 1))
                     else Const(harmonic(upper, abs(power)) - harmonic(lower - 1, abs(power)))
                 }
@@ -63,7 +63,7 @@ data class RowSum(
                 if(body.parts.size == 1) {
                     val (base, ratPower) = body.parts.entries.single()
                     if(!ratPower.isWhole()) return null
-                    return powRowSum(index, lowerBound, upperBound, base, ratPower.wholePart)?.times(body.constant)
+                    return powRowSum(index, lowerBound, upperBound, base, ratPower.toLong())?.times(body.constant)
                 }
 
                 val (lhv, rhv) = body.parts.partitionTo(mutableMapOf(), mutableMapOf()) { s, _ -> !s.containsVariable(index) }
@@ -86,9 +86,9 @@ data class RowSum(
 
             val range = upperBound - lowerBound + 1
 
-            if(range is Const && range.value < Rational(100)) {
-                require(range.value.isWhole() && range.value >= Rational.ZERO)
-                return Sum.of(*(0 until range.value.wholePart).toList().mapToArray {
+            if(range is Const && range.value < SymRational(100)) {
+                require(range.value.isWhole() && range.value >= SymRational.ZERO)
+                return Sum.of(*(0 until range.value.toLong()).toList().mapToArray {
                     body.subst(mapOf(index to lowerBound + it))
                 })
             }

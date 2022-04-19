@@ -5,7 +5,7 @@ fun main(args: Array<String>) {
         val x by this
         val y by this
         val z by this
-        println(x pow Rational(1, 2) pow 2)
+        println(x pow SymRational(1, 2) pow 2)
         println((x * x + y).subst(mapOf(x to 23())))
         println((x + y) * (x + y) * (x + z) * 2)
         println((x + y - z) pow 2)

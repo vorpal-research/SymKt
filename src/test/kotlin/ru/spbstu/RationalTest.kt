@@ -1,56 +1,56 @@
 package ru.spbstu
 
-import ru.spbstu.Rational.Companion.HALF
-import ru.spbstu.Rational.Companion.ZERO
-import ru.spbstu.Rational.Companion.ONE
+import ru.spbstu.SymRational.Companion.HALF
+import ru.spbstu.SymRational.Companion.ZERO
+import ru.spbstu.SymRational.Companion.ONE
 import kotlin.test.*
 
 class RationalTest {
     @Test
     fun smokeTest() {
-        assertEquals(Rational(1, 2),1.toRational() / 2)
-        assertEquals(Rational(1, 4), 4.toRational() / 16)
-        assertEquals(Rational(6, 9), 6.toRational() / 9)
-        assertEquals(Rational(2, 3),6.toRational() / 9)
+        assertEquals(SymRational(1, 2),1.toRational() / 2)
+        assertEquals(SymRational(1, 4), 4.toRational() / 16)
+        assertEquals(SymRational(6, 9), 6.toRational() / 9)
+        assertEquals(SymRational(2, 3),6.toRational() / 9)
 
-        assertEquals(Rational(-24, 36),6.toRational() / -9)
+        assertEquals(SymRational(-24, 36),6.toRational() / -9)
 
-        assertEquals(Rational(8, -256).num, -1)
-        assertEquals(Rational(8, -256).den, 32)
+        assertEquals(SymRational(8, -256).num, -1)
+        assertEquals(SymRational(8, -256).den, 32)
 
-        assertFailsWith<IllegalArgumentException> { Rational(1, 0) }
+        assertFailsWith<IllegalArgumentException> { SymRational(1, 0) }
     }
 
     @Test
     fun comparisonTest() {
-        assertTrue { Rational(1, 2) < Rational(3, 4) }
-        assertTrue { Rational(10, 18) > Rational(10, 19) }
+        assertTrue { SymRational(1, 2) < SymRational(3, 4) }
+        assertTrue { SymRational(10, 18) > SymRational(10, 19) }
     }
 
     @Test
     fun inverseTest() {
         assertEquals(2.toRational(), HALF.inverse())
-        assertEquals(Rational(3, -4), Rational(4, -3).inverse())
+        assertEquals(SymRational(3, -4), SymRational(4, -3).inverse())
     }
 
     @Test
     fun arithmeticsTest() {
-        assertEquals(-HALF, Rational(-1, 2))
+        assertEquals(-HALF, SymRational(-1, 2))
         assertEquals(-HALF, ZERO - HALF)
         assertEquals(ONE,HALF + HALF)
         assertEquals(ONE, HALF * 2)
         assertEquals(ONE, HALF / HALF)
-        assertEquals(Rational(1, 4), HALF / 2)
-        assertEquals(Rational(1, 4), HALF * HALF)
-        assertEquals(Rational(1, -4), -HALF * HALF)
-        assertEquals(Rational(3, 2), HALF + 1)
+        assertEquals(SymRational(1, 4), HALF / 2)
+        assertEquals(SymRational(1, 4), HALF * HALF)
+        assertEquals(SymRational(1, -4), -HALF * HALF)
+        assertEquals(SymRational(3, 2), HALF + 1)
         assertEquals(ZERO, HALF - HALF)
         assertEquals(-HALF, HALF - 1)
-        assertEquals(Rational(1, 32),Rational(7, 256) + Rational(1, 256))
+        assertEquals(SymRational(1, 32),SymRational(7, 256) + SymRational(1, 256))
 
-        assertEquals(Rational(1, 4), HALF pow 2)
-        assertEquals(Rational(1, 8), HALF pow 3)
-        assertEquals(Rational(8), HALF pow -3)
+        assertEquals(SymRational(1, 4), HALF pow 2)
+        assertEquals(SymRational(1, 8), HALF pow 3)
+        assertEquals(SymRational(8), HALF pow -3)
         assertEquals(ONE, HALF pow 0)
         assertEquals(HALF, HALF pow 1)
         assertEquals(2L.toRational(), HALF pow -1)
@@ -61,7 +61,7 @@ class RationalTest {
         assertTrue { (HALF * 4).isWhole() }
         assertTrue { (HALF * -4).isWhole() }
         assertFalse { (HALF * 3).isWhole() }
-        assertTrue { (Rational(1, 4) + Rational(3, 4)).isWhole() }
+        assertTrue { (SymRational(1, 4) + SymRational(3, 4)).isWhole() }
 
         assertEquals(4L, (ONE * 4).wholePart)
         assertEquals(2L, (HALF * 4).wholePart)
@@ -77,17 +77,17 @@ class RationalTest {
 
     @Test
     fun hashCodeTest() {
-        val map = hashMapOf<Rational, Int>()
+        val map = hashMapOf<SymRational, Int>()
         map[HALF] = 1
-        map[Rational(4, 8)] = 2
-        map[Rational(-4, 8)] = 3
+        map[SymRational(4, 8)] = 2
+        map[SymRational(-4, 8)] = 3
 
         assertEquals(mapOf(HALF to 2, -HALF to 3), map)
     }
 
     @Test
     fun toStringTest() {
-        val lst = listOf(HALF, Rational(3, -4), ONE * 2, ZERO, Rational.ONE)
+        val lst = listOf(HALF, SymRational(3, -4), ONE * 2, ZERO, SymRational.ONE)
         assertEquals("[1/2, -3/4, 2, 0, 1]", "$lst")
     }
 

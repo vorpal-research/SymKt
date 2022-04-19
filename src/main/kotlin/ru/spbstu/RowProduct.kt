@@ -36,14 +36,14 @@ data class RowProduct(
                 val (a, b) =
                     body.parts.partitionTo(mutableMapOf(), mutableMapOf()) { a, _ -> !a.containsVariable(index) }
                 // i + k --> (i+k)! / k!
-                if(b[index] == Rational.ONE && b.size == 1) {
+                if(b[index] == SymRational.ONE && b.size == 1) {
                     val k = Sum(constant = body.constant, parts = a).simplify()
                     return Factorial(body) / Factorial(k)
                 }
             }
 
-            if(range is Const && range.value < Rational(100)) {
-                require(range.value.isWhole() && range.value >= Rational.ZERO)
+            if(range is Const && range.value is SymRational && range.value < SymRational(100)) {
+                require(range.value.isWhole() && range.value >= SymRational.ZERO)
                 return Product.of(*(0 until range.value.wholePart).toList().mapToArray {
                     body.subst(mapOf(index to lowerBound + it))
                 })

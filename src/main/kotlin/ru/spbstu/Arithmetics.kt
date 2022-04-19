@@ -41,5 +41,5 @@ private fun binomialUncached(n: Long, k: Long): Long {
         return binomial(n, n - k)
     }
     // (n choose k) == (n-1 choose k-1) * n / k
-    return (Rational(binomial(n - 1, k - 1), k) * n).wholePart
+    return (SymRational(binomial(n - 1, k - 1), k) * n).wholePart
 }
